@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><title>Abyssfall</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080b12;color:#eee;font-family:system-ui,Arial;touch-action:none}
+#wrap{height:100dvh;width:100vw;display:flex;justify-content:center;background:radial-gradient(ellipse at center,#18202b,#06080e)}
+#game{height:100dvh;max-width:56.25dvh;width:100vw;position:relative;overflow:hidden;background:#101820;box-shadow:0 0 30px #000}
+canvas{width:100%;height:100%;display:block}
+.hud{position:absolute;inset:0;pointer-events:none}
+.top{position:absolute;top:env(safe-area-inset-top,6px);left:3%;right:3%;display:flex;justify-content:space-between;align-items:flex-start;gap:5px}
+.panel{background:#0a101bd9;border:1px solid #71829b66;border-radius:12px;padding:6px 9px;box-shadow:0 4px 12px #0007;font-size:clamp(10px,2.7vw,14px);text-shadow:0 1px 2px #000}
+.brand{font-weight:900;letter-spacing:.08em;color:#e6d6bd}.gold{color:#ffd36b;font-weight:800}.hpbar{height:5px;background:#4b2029;border-radius:8px;overflow:hidden;margin-top:4px}.hpbar i{display:block;height:100%;background:#e64c68;width:100%}
+#notice{position:absolute;top:15%;left:5%;right:5%;text-align:center;font-size:clamp(12px,3.4vw,17px);font-weight:900;color:#ffe1a4;text-shadow:0 2px 5px #000;letter-spacing:.05em}
+.controls{position:absolute;inset:0;pointer-events:none}
+#stick{pointer-events:auto;position:absolute;left:5%;bottom:14%;width:25%;aspect-ratio:1;border:2px solid #b8d5ff55;border-radius:50%;background:#9bb9df18;box-shadow:inset 0 0 18px #8abaff12}
+#knob{position:absolute;width:42%;height:42%;left:29%;top:29%;border-radius:50%;background:#9dbbe977;border:1px solid #e5f1ff88}
+.actions{pointer-events:auto;position:absolute;right:4%;bottom:12%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:43%}
+button{border:1px solid #a6b7d866;border-radius:50%;aspect-ratio:1;background:radial-gradient(circle at 35% 25%,#344c70,#121a2b 70%);color:#f5f0e7;font-weight:900;font-size:clamp(9px,2.5vw,13px);text-shadow:0 2px 3px #000;box-shadow:0 4px 9px #0009;touch-action:manipulation}
+button:active{transform:scale(.94);filter:brightness(1.4)}button small{display:block;font-size:.8em;color:#b7d9ff;margin-top:3px}
+.actions .attack{background:radial-gradient(circle at 35% 25%,#a44b4e,#381b2a 75%);border-color:#f2a0a088}
+#shop{pointer-events:auto;position:absolute;left:3%;top:20%;width:42%;display:grid;gap:5px}
+#shop button{aspect-ratio:auto;border-radius:8px;text-align:left;padding:7px;background:#111827e8;border-color:#b39b6b77;font-size:clamp(9px,2.6vw,13px)}
+#shop button b{color:#ffd36b;float:right}
+#help{position:absolute;left:4%;right:4%;bottom:3%;font-size:10px;color:#aab5c4;text-align:center;text-shadow:0 1px 3px #000}
+#overlay{display:none;position:absolute;inset:0;background:#050912d9;align-items:center;justify-content:center;text-align:center;padding:24px;pointer-events:auto}
+#overlay .box{background:#141d2a;border:1px solid #b69a65;border-radius:18px;padding:24px;max-width:90%}#overlay h1{color:#ffd98b}
+@media (max-height:560px){#shop{top:18%;gap:3px}#shop button{padding:4px}.actions{bottom:7%;width:38%}#stick{bottom:8%;width:21%}#help{display:none}}
+</style></head><body><div id="wrap"><div id="game"><canvas id="c"></canvas><div class="hud">
+<div class="top"><div class="panel"><div class="brand">☠ ABYSSFALL</div><div id="lvl">Уровень 1 · XP 0/100</div><div class="hpbar"><i id="hpfill"></i></div><div id="hp">HP 300/300</div></div><div class="panel"><div>⏱ <span id="clock">00:00</span></div><div class="gold">✦ <span id="gold">250</span> золота</div><div>Вражеская база: <span id="basehp">500</span></div></div></div>
+<div id="notice">УНИЧТОЖЬ КРИСТАЛЛ ВРАГА</div>
+<div id="shop"><button data-item="boots">🥾 Сапоги <b>100g</b><br><small>Скорость +20%</small></button><button data-item="blade">🗡 Клинок <b>180g</b><br><small>Урон +15</small></button><button data-item="relic">🔮 Реликвия <b>150g</b><br><small>Макс. HP +100</small></button></div>
+<div class="controls"><div id="stick"><div id="knob"></div></div><div class="actions"><button id="attack" class="attack">⚔<small>АТАКА</small></button><button id="bolt">✦<small>ТЕНЬ</small></button><button id="regen">✚<small>ЛЕЧЕНИЕ</small></button><button id="recall">⌂<small>ВОЗВРАТ</small></button></div><div id="help">Двигай джойстик · добивай крипов ради золота · ломай башню и кристалл</div></div>
+<div id="overlay"><div class="box"><h1 id="result">ПОБЕДА</h1><p id="resultText">Кристалл разрушен.</p><button id="restart" style="border-radius:12px;aspect-ratio:auto;padding:14px 22px">ИГРАТЬ СНОВА</button></div></div>
+</div></div></div>
+<script>
+(()=>{
+const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');let W=360,H=640,dpr=1;
+function resize(){dpr=Math.min(devicePixelRatio||1,2);W=canvas.clientWidth;H=canvas.clientHeight;canvas.width=W*dpr;canvas.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)}addEventListener('resize',resize);resize();
+const ui=id=>document.getElementById(id);let game;
+function reset(){game={t:0,gold:250,xp:0,lvl:1,hp:300,maxhp:300,damage:35,speed:145,px:.5,pz:.68,boltCd:0,regenCd:0,atkCd:0,tower:300,base:500,over:false,notice:'УНИЧТОЖЬ КРИСТАЛЛ ВРАГА',minions:[],particles:[],enemyX:.62,enemyZ:.44,enemyHp:180,enemyAtk:0};spawnWave();ui('overlay').style.display='none'}
+function spawnWave(){for(let i=0;i<3;i++){game.minions.push({ally:true,x:.43+i*.07,z:.62,hp:70,max:70,atk:0});game.minions.push({ally:false,x:.42+i*.07,z:.40,hp:70,max:70,atk:0})}}
+function say(s){game.notice=s;ui('notice').textContent=s;clearTimeout(say.tm);say.tm=setTimeout(()=>{if(game&&!game.over){game.notice='УНИЧТОЖЬ КРИСТАЛЛ ВРАГА';ui('notice').textContent=game.notice}},1800)}
+function reward(g,x){game.gold+=g;game.xp+=x;if(game.xp>=game.lvl*100){game.xp-=game.lvl*100;game.lvl++;game.damage+=5;game.maxhp+=25;game.hp=game.maxhp;say('НОВЫЙ УРОВЕНЬ '+game.lvl)}}
+function dist(a,b){return Math.hypot(a.x-b.x,(a.z-b.z)*1.1)}
+function attack(power=game.damage,range=.12){if(game.atkCd>0)return;game.atkCd=.45;let p={x:game.px,z:game.pz},best=null,bd=range;for(const m of game.minions)if(!m.ally){let d=dist(p,m);if(d<bd){bd=d;best=m}}
+if(best){best.hp-=power;if(best.hp<=0){game.minions=game.minions.filter(m=>m!==best);reward(30,25);say('+30 ЗОЛОТА · +25 XP')}}else if(Math.abs(game.pz-.35)<.16&&Math.abs(game.px-.5)<.22&&game.tower>0){game.tower-=power;if(game.tower<=0){game.tower=0;say('БАШНЯ РАЗРУШЕНА!')} }
+else if(game.tower<=0&&game.pz<.24&&Math.abs(game.px-.5)<.24){game.base-=power;if(game.base<=0){game.base=0;finish(true)}}
+game.particles.push({x:game.px,z:game.pz,life:.25,color:'#f5d99a'})}
+function spell(){if(game.boltCd>0)return;game.boltCd=3.5;let best=null,bd=.42;for(const m of game.minions)if(!m.ally&&dist({x:game.px,z:game.pz},m)<bd){bd=dist({x:game.px,z:game.pz},m);best=m}if(best){best.hp-=85;if(best.hp<=0){game.minions=game.minions.filter(m=>m!==best);reward(30,25)}say('ТЕНЕВОЙ СНАРЯД!')}else if(game.tower>0&&game.pz<.48){game.tower-=55;if(game.tower<=0){game.tower=0;say('БАШНЯ РАЗРУШЕНА!')}}else if(game.tower<=0&&game.pz<.3){game.base-=55;if(game.base<=0)finish(true)}}
+function finish(win){game.over=true;ui('overlay').style.display='flex';ui('result').textContent=win?'ПОБЕДА':'ПОРАЖЕНИЕ';ui('resultText').textContent=win?'Ты уничтожил Кристалл Ужаса.':'Герой пал. Попробуй ещё раз.'}
+document.querySelectorAll('[data-item]').forEach(b=>b.onclick=()=>{let i=b.dataset.item,cost={boots:100,blade:180,relic:150}[i];if(game.gold<cost){say('НЕ ХВАТАЕТ ЗОЛОТА');return}game.gold-=cost;if(i==='boots')game.speed*=1.2;if(i==='blade')game.damage+=15;if(i==='relic'){game.maxhp+=100;game.hp+=100}say('ПРЕДМЕТ КУПЛЕН')});
+ui('attack').onclick=()=>attack();ui('bolt').onclick=spell;ui('regen').onclick=()=>{if(game.regenCd>0)return;game.regenCd=10;game.hp=Math.min(game.maxhp,game.hp+100);say('+100 ЗДОРОВЬЯ')};ui('recall').onclick=()=>{game.px=.5;game.pz=.68;game.hp=game.maxhp;say('ВОЗВРАЩЕНИЕ НА АЛТАРЬ')};ui('restart').onclick=reset;
+let joy={x:0,y:0};const stick=ui('stick'),knob=ui('knob');function joyMove(e){let r=stick.getBoundingClientRect(),x=e.clientX-(r.left+r.width/2),y=e.clientY-(r.top+r.height/2),lim=r.width*.34,l=Math.hypot(x,y)||1;x*=Math.min(1,lim/l);y*=Math.min(1,lim/l);joy.x=x/lim;joy.y=y/lim;knob.style.transform=`translate(${x}px,${y}px)`}
+stick.addEventListener('pointerdown',e=>{stick.setPointerCapture(e.pointerId);joyMove(e)});stick.addEventListener('pointermove',e=>{if(e.buttons||e.pressure)joyMove(e)});function joyEnd(){joy.x=joy.y=0;knob.style.transform=''}stick.addEventListener('pointerup',joyEnd);stick.addEventListener('pointercancel',joyEnd);
+let last=performance.now();function update(dt){if(game.over)return;game.t+=dt;game.atkCd=Math.max(0,game.atkCd-dt);game.boltCd=Math.max(0,game.boltCd-dt);game.regenCd=Math.max(0,game.regenCd-dt);
+game.px=Math.max(.12,Math.min(.88,game.px+joy.x*game.speed*dt/360));game.pz=Math.max(.16,Math.min(.83,game.pz+joy.y*game.speed*dt/640));
+for(const m of game.minions){m.atk-=dt;let enemy=game.minions.find(o=>o.ally!==m.ally&&dist(m,o)<.11);if(enemy){if(m.atk<=0){enemy.hp-=12;m.atk=1.1}}else{m.z+= (m.ally?-1:1)*dt*.035;if(m.z<.34&&m.ally&&game.tower>0&&m.atk<=0){game.tower-=8;m.atk=1.2}if(m.z<.22&&m.ally&&game.tower<=0&&m.atk<=0){game.base-=8;m.atk=1.2}}}
+game.minions=game.minions.filter(m=>m.hp>0&&m.z>.13&&m.z<.9);
+if(game.t%14<dt)spawnWave();
+// enemy bot approaches and damages player when close
+let d=dist({x:game.px,z:game.pz},{x:game.enemyX,z:game.enemyZ});game.enemyAtk-=dt;if(d>.12){game.enemyX+=(game.px-game.enemyX)*dt*.18;game.enemyZ+=(game.pz-game.enemyZ)*dt*.18}else if(game.enemyAtk<=0){game.hp-=14;game.enemyAtk=1.4;if(game.hp<=0){game.hp=game.maxhp;game.px=.5;game.pz=.68;say('ГЕРОЙ ПАЛ · ВОЗРОЖДЕНИЕ')}}
+game.particles=game.particles.filter(p=>(p.life-=dt)>0);
+if(game.base<=0)finish(true)}
+function draw(){ctx.clearRect(0,0,W,H);let grd=ctx.createLinearGradient(0,0,W,H);grd.addColorStop(0,'#17241f');grd.addColorStop(.5,'#202b27');grd.addColorStop(1,'#0d1717');ctx.fillStyle=grd;ctx.fillRect(0,0,W,H);
+// dark forest sides
+for(let i=0;i<38;i++){let x=(i*73%W),y=(i*97%H);ctx.fillStyle=i%2?'#0a1715':'#12201b';ctx.beginPath();ctx.arc(x,y,9+(i%4)*4,0,Math.PI*2);ctx.fill()}
+// lane perspective
+ctx.fillStyle='#3b3938';ctx.beginPath();ctx.moveTo(W*.34,0);ctx.lineTo(W*.66,0);ctx.lineTo(W*.95,H);ctx.lineTo(W*.05,H);ctx.closePath();ctx.fill();
+ctx.strokeStyle='#77706a';ctx.lineWidth=2;for(let i=0;i<12;i++){let y=i*H/11;let w= W*(.16+.8*i/11);ctx.beginPath();ctx.moveTo(W/2-w/2,y);ctx.lineTo(W/2+w/2,y);ctx.stroke()}ctx.strokeStyle='#242b2b';ctx.lineWidth=5;ctx.strokeRect(W*.12,H*.25,W*.76,H*.65);
+// world mapping z 0..1 => screen 0..H, x normalized
+const pos=o=>({x:o.x*W,y:(1-o.z)*H*.84+H*.08,scale:.48+o.z*.55});
+function unit(o,color,r){let p=pos(o);ctx.fillStyle='#0008';ctx.beginPath();ctx.ellipse(p.x,p.y+r*p.scale*.8,r*p.scale*1.1,r*p.scale*.45,0,0,Math.PI*2);ctx.fill();ctx.fillStyle=color;ctx.beginPath();ctx.arc(p.x,p.y,r*p.scale,0,Math.PI*2);ctx.fill();ctx.fillStyle='#d9e5e9';ctx.beginPath();ctx.arc(p.x-r*.22*p.scale,p.y-r*.25*p.scale,r*.25*p.scale,0,Math.PI*2);ctx.fill();if(o.hp!==undefined&&o.max){ctx.fillStyle='#381c26';ctx.fillRect(p.x-r*p.scale,p.y-r*p.scale-7,r*2*p.scale,3);ctx.fillStyle=o.ally?'#5be0a0':'#ff4f66';ctx.fillRect(p.x-r*p.scale,p.y-r*p.scale-7,r*2*p.scale*Math.max(0,o.hp/o.max),3)}}
+ // tower and crystal
+let ty=pos({x:.5,z:.34});if(game.tower>0){ctx.fillStyle='#21131c';ctx.fillRect(ty.x-15,ty.y-22,30,43);ctx.fillStyle='#8f243f';ctx.beginPath();ctx.moveTo(ty.x-20,ty.y-20);ctx.lineTo(ty.x,ty.y-55);ctx.lineTo(ty.x+20,ty.y-20);ctx.fill();ctx.fillStyle='#ff4a70';ctx.fillRect(ty.x-12,ty.y-14,24,5);ctx.fillStyle='#eee';ctx.fillRect(ty.x-24,ty.y-62,48,4);ctx.fillStyle='#ff476b';ctx.fillRect(ty.x-24,ty.y-62,48*game.tower/300,4)}
+else{let by=pos({x:.5,z:.2});ctx.fillStyle='#30132d';ctx.beginPath();ctx.moveTo(by.x,by.y-40);ctx.lineTo(by.x+24,by.y-10);ctx.lineTo(by.x+12,by.y+18);ctx.lineTo(by.x-12,by.y+18);ctx.lineTo(by.x-24,by.y-10);ctx.closePath();ctx.fill();ctx.fillStyle='#ff317d';ctx.beginPath();ctx.moveTo(by.x,by.y-31);ctx.lineTo(by.x+10,by.y-8);ctx.lineTo(by.x,by.y+8);ctx.lineTo(by.x-10,by.y-8);ctx.fill();ctx.fillStyle='#eee';ctx.fillRect(by.x-30,by.y-48,60,4);ctx.fillStyle='#ff476b';ctx.fillRect(by.x-30,by.y-48,60*Math.max(0,game.base/500),4)}
+game.minions.forEach(m=>unit(m,m.ally?'#3d91c9':'#c53d52',8));unit({x:game.enemyX,z:game.enemyZ,hp:game.enemyHp,max:180},'#9d345a',12);
+let p=pos({x:game.px,z:game.pz});ctx.fillStyle='#101b2b';ctx.beginPath();ctx.ellipse(p.x,p.y+7,16*p.scale,7*p.scale,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#3f83bd';ctx.beginPath();ctx.moveTo(p.x,p.y-19*p.scale);ctx.lineTo(p.x+13*p.scale,p.y+5*p.scale);ctx.lineTo(p.x,p.y+12*p.scale);ctx.lineTo(p.x-13*p.scale,p.y+5*p.scale);ctx.closePath();ctx.fill();ctx.fillStyle='#d1d8e2';ctx.beginPath();ctx.arc(p.x,p.y-17*p.scale,7*p.scale,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#87dfff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(p.x,p.y,22*p.scale,0,Math.PI*2);ctx.stroke();
+game.particles.forEach(q=>{let pp=pos(q);ctx.globalAlpha=q.life/.25;ctx.fillStyle=q.color;ctx.beginPath();ctx.arc(pp.x,pp.y,12*(1-q.life/.25),0,Math.PI*2);ctx.fill();ctx.globalAlpha=1});
+ui('gold').textContent=game.gold;ui('lvl').textContent=`Уровень ${game.lvl} · XP ${game.xp}/${game.lvl*100}`;ui('hp').textContent=`HP ${Math.max(0,game.hp)}/${game.maxhp}`;ui('hpfill').style.width=(100*game.hp/game.maxhp)+'%';ui('basehp').textContent=Math.max(0,Math.ceil(game.base));let mm=Math.floor(game.t/60),ss=Math.floor(game.t%60);ui('clock').textContent=String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0');
+}
+function loop(now){let dt=Math.min(.04,(now-last)/1000);last=now;update(dt);draw();requestAnimationFrame(loop)}
+reset();requestAnimationFrame(loop);
+})();
+</script></body></html>
